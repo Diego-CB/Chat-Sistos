@@ -15,7 +15,7 @@ message UsersOnline{
     repeated User users = 1;
 }
 
-message UserOption{
+message UserOption {
     // opcion a realizar
     int32 op = 1;
     // crear nuevo usuario
@@ -26,6 +26,13 @@ message UserOption{
     Status status = 4;
     // enviar mensaje
     Message message = 5;
+}
+
+{
+   op
+   message {
+   
+   }
 }
 
 message Answer{
