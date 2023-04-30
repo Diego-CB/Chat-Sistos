@@ -1,4 +1,5 @@
-# 🤖 Chat usando Sockets
+# 🤖 Chat
+Server-Client chat using sockets.
 
 ## 📡 Tecnologias Utilizadas
 
