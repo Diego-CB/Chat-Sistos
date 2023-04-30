@@ -28,13 +28,6 @@ message UserOption {
     Message message = 5;
 }
 
-{
-   op
-   message {
-   
-   }
-}
-
 message Answer{
     // opcion recibida
     int32 op = 1;
