@@ -61,7 +61,7 @@ int main(int arg, char **args)
     printf("6. Ayuda.\n");
     printf("7. Salir.\n");
     printf("-> ");
-    scanf("%d", &opcion_menu)
+    scanf("%d", &opcion_menu);
     if (opcion_menu == 1)
     {
       printf("1\n");
