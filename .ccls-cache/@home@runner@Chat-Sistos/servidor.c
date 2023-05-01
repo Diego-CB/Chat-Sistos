@@ -7,11 +7,11 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
-#include <chat.pb-c.h>
+#include "./Protocol/chat.pb-c.h"
 
 int main(int arg, char **args)
 {
-  struct ChatSistOS__UserOption cadena;       // lo que recibe el servidor de los clientes.
+  ChatSistOS__UserOption cadena;       // lo que recibe el servidor de los clientes.
   int listen_socket;      // para crear socket
   int clientes_en_espera; // parar recoger a los clientes en lista de espera.
   struct sockaddr_in servidorADDR; // para crear socket
@@ -57,7 +57,7 @@ int main(int arg, char **args)
   clientes_en_espera = accept(listen_socket, (struct sockaddr *)NULL, NULL);
 
   while (1) {
-    bzero(cadena, 100); // limpiar cadena
+    // bzero(cadena, 100); // limpiar cadena
 
     if (read(clientes_en_espera, cadena, 100) < 0) {
       return -1;
