@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
   user_option.op = 2; // Crear nuevo usuario
   ChatSistOS__NewUser new_user = CHAT_SIST_OS__NEW_USER__INIT;
   new_user.username = user_name;
-  new_user.IP = client_ip_str;
+  new_user.ip = client_ip_str;
   user_option.createuser = &new_user;
 
   // Serializar mensaje UserOption
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 
   // Recibir respuesta del servidor
   uint8_t buf[4096];
-  ssize_t bytes_received = recv(sockfd, buf, sizeof(buf), 0);
+  ssize_t bytes_received = recv(sock, buf, sizeof(buf), 0);
   if (bytes_received == -1) {
       perror("recv");
       exit(EXIT_FAILURE);
