@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 
 // Definir las estructuras del protocolo
-#include "./Protocol/chat_sistOS.pb-c.h"
+#include "./Protocol/chat.pb-c.h"
 
 int main(int argc, char *argv[]) {
 
@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
 
   // Conectar al servidor
   if (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
-      printf("Error al conectarse al servidor");
+      printf("Error al conectarse al servidor. Puede que la demanda sea alta.");
       return 1;
   }
 
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
   chat_sist_os__user_option__pack(&user_option, user_option_buf);
 
   // Enviar mensaje UserOption al servidor
-  if (send(sockfd, user_option_buf, user_option_size, 0) == -1) {
+  if (send(sock, user_option_buf, user_option_size, 0) == -1) {
       perror("send");
       exit(EXIT_FAILURE);
   }
