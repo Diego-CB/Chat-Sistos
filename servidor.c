@@ -36,7 +36,7 @@ void* sesion_cliente(void *arg)
   strftime(horaMensaje, 100, "(%H:%M)", tm); // hora que se recibe el mensaje
 
   cli_count++;
-  client_t *cli = (client_t *)arg;
+  info_cliente_ *cli = (info_cliente_ *)arg;
   
   ChatSistOS__Answer *respuesta;
   respuesta->op = cadena->op;
@@ -168,31 +168,33 @@ int main(int argc, char **argv) {
     clientes_en_espera = accept(listen_socket, (struct sockaddr *)clienteADDR, sizeof(clienteADDR));
 
     // Verificar que no exceda limites de servidor
-    if(clientesActivos == LIMITE_SESIONES){
-        printf(" > Error SERVER CLIENTES MAXED OUT: ");
-        print_client_addr(clienteADDR);
-        printf(":%d\n", clienteADDR.sin_port);
-        close(clientes_en_espera);
-        continue;
+    if(clientesActivos < LIMITE_SESIONES)
+    {
+      printf(" > Error SERVER CLIENTES MAXED OUT: ");
+      print_client_addr(clienteADDR);
+      //  printf(":%d\n", clienteADDR.sin_port);
+      close(clientes_en_espera);
+      continue;
     }
-
-    // Una vez verificado que el cliente a agregar no excede la cantidad maxima entonces se registra
-    client_t *cli = (client_t *)malloc(sizeof(client_t));
-    cli->address = cli_addr;
-    cli->sockfd = connfd;
-    cli->uid = uid++;
-    cli->status = 1;
-
-    // Add client to the queue and fork thread
-    queue_add(cli);
-    pthread_create(&tid, NULL, &handle_client, (void*)cli);
-    
-    bzero(cadena, 100); // limpiar cadena
-
-    if (read(clientes_en_espera, cadena, 100) < 0) {
-      return -1;
+    else
+    {
+      // Una vez verificado que el cliente a agregar no excede la cantidad maxima entonces se registra
+      info_cliente_ *nuevo_cliente = (info_cliente_ *)malloc(sizeof(info_cliente_));
+      nuevo_cliente -> address = cli_addr;
+      nuevo_cliente -> sockfd = connfd;
+      nuevo_cliente -> uid = uid++;
+      nuevo_cliente -> status = 1;
+  
+      // Add client to the queue and fork thread
+      queue_add(nuevo_cliente);
+      pthread_create(&tid, NULL, &sesion_cliente, (void*)nuevo_cliente);
+      
+      bzero(cadena, 100); // limpiar cadena
+  
+      if (read(clientes_en_espera, cadena, 100) < 0) {
+        return -1;
+      }      
     }
-    
   }
   return 0;
 }
