@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 
 // Definir las estructuras del protocolo
-#include "chat_sistOS.pb-c.h"
+#include "./Protocol/chat_sistOS.pb-c.h"
 
 int main(int argc, char *argv[]) {
 
@@ -69,16 +69,18 @@ int main(int argc, char *argv[]) {
   // Deserializar mensaje Answer
   ChatSistOS__Answer *answer = chat_sist_os__answer__unpack(NULL, bytes_received, buf);
   if (answer == NULL) {
-      fprintf(stderr, "Error al deserializar mensaje Answer\n");
-      exit(EXIT_FAILURE);
+    fprintf(stderr, "Error al deserializar mensaje Answer\n");
+    exit(EXIT_FAILURE);
   }
 
   // Verificar si el usuario fue creado exitosamente
   if (answer->response_status_code == 200) {
-      printf("Usuario creado exitosamente\n");
+    printf("Usuario creado exitosamente\n");
   } else {
-      printf("Error al crear usuario: %s\n", answer->response_message);
+    printf("Error al crear usuario: %s\n", answer->response_message);
   }
+  
+  return 0;
 }
   /*
   // Menu para recibir acciones del usuario
