@@ -80,6 +80,18 @@ int main(int argc, char **argv)
     }
 
     // AQUI RECIBE EL USER OPTION PARA CREAR USUARIO
+    uint8_t buf[4096];
+    ssize_t bytes_recieved = recv(sock, buf, sizeof(buf), 0); // VERIFICAR PQ AQUI VA EL SOCKET DE USUARIO
+    if (bytes_recieved == -1) {
+        perror("> Error en recv");
+        exit(EXIT_FAILURE);
+    }
+
+    ChatSistOS__UserOption *user_option_createUser = chat_sist_os__user_option__unpack(NULL, bytes_recieved, buf)
+    user_option_createUser.op = 2; // Crear nuevo usuario
+
+    // FALTA SACAR EL NEW USER DE EL USER OPTION
+
 
     // Verificar si hay menos de MAX_CLIENTES clientes conectados actualmente
     if (num_clientes < LIMITE_SESIONES) {
@@ -100,24 +112,48 @@ int main(int argc, char **argv)
       }
 
       // ARMAR ANSWER PARA ENVIAR Y DECIR SI SE LOGRO CREAR USER
+      ChatSistOS__Answer respuesta_success_userCreate = CHAT_SIST_OS__ANSWER__INIT;
+      respuesta_success_userCreate.op = 2; // Opción de crear usuario VERIFICAR
+      respuesta_success_userCreate.responde_status_code = 200
+      respuesta_success_userCreate.response_message = " > Usuario creado con exito!"
+
+      //ENVIARLE AL USUARIO LA RESPUESTA
+      //serializar
+      size_t respuesta_success_userCreate_size = chat_sist_os__answer__get_packed_size(&respuesta_success_userCreate);
+      uint8_t *respuesta_success_userCreate_buf = malloc(respuesta_success_userCreate_size);
+      chat_sist_os__answer__pack(&respuesta_success_userCreate, respuesta_success_userCreate_buf);
+
+      //enviar - FALTA MODIFICAR SOCK POR VALORES EN SERVIDOR
+      if (send(sock, respuesta_success_userCreate_buf, respuesta_success_userCreate_size, 0) == -1) {
+        perror(" > Error en send");
+        exit(EXIT_FAILURE);
+      }
 
 
     } else {
 
       // ARMAR ANSWER PARA ENVIAR Y DECIR NO SE LOGRO CREAR USER
+      ChatSistOS__Answer respuesta_failed_userCreate = CHAT_SIST_OS__ANSWER__INIT;
+      respuesta_failed_userCreate.op = 2; // Opción de crear usuario VERIFICAR
+      respuesta_failed_userCreate.response_status_code = 400
+      respuesta_failed_userCreate.response_message = " > Error: Usuario no se ha podido crear por alta demanda."
+
+      //ENVIARLE AL USUARIO LA RESPUESTA
+      //serializar
+      size_t respuesta_failed_userCreate_size = chat_sist_os__answer__get_packed_size(&respuesta_failed_userCreate);
+      uint8_t *respuesta_failed_userCreate_buf = malloc(respuesta_failed_userCreate_size);
+      chat_sist_os__answer__pack(&respuesta_failed_userCreate, respuesta_failed_userCreate_buf);
+
+      //enviar - FALTA MODIFICAR SOCK POR VALORES EN SERVIDOR
+      if (send(sock, respuesta_failed_userCreate_buf, respuesta_failed_userCreate_size, 0) == -1) {
+        perror(" > Error en send");
+        exit(EXIT_FAILURE);
+      }
 
       // Demasiados clientes conectados, cerrar la conexión del nuevo cliente
       close(client_sock);
       printf(" > Demasiados clientes conectados, la conexión del nuevo cliente fue cerrada");
     }
-
-  ChatSistOS__Answer respuesta = CHAT_SIST_OS__ANSWER__INIT;
-  respuesta.op = 1; // Opción de enviar un mensaje
-
-  // Serializar la estructura de UserOption para enviarla al servidor
-  uint8_t buffer[1024];
-  unsigned int length = user_option__get_packed_size(&userOption);
-  user_option__pack(&userOption, buffer);
 
   // se deberia de recibir el useroption AQUI
     /*
@@ -133,12 +169,6 @@ int main(int argc, char **argv)
     elif op == 2
     elif op == 3
     */
-
-  // Enviar el mensaje al servidor
-  if (send(sock, buffer, length, 0) < 0) {
-      printf("Error al enviar el mensaje");
-      return 1;
-  }
 
   // Recibir y enviar mensajes con el cliente
   char buffer[1024];
