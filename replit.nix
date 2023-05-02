@@ -4,6 +4,6 @@
 		pkgs.ccls
 		pkgs.gdb
 		pkgs.gnumake
-    pkgs.protobuf-c
+    protobuf-c
 	] ++ legacyPolygott;
 }
