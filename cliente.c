@@ -83,6 +83,29 @@ int main(int argc, char *argv[]) {
     if (opcion_menu == 1) // Broadcast
     {
       user_option_menu.op = 1;
+      int valor_opcion_chat_general = 0;
+      while (valor_opcion_chat_general != 2) {
+
+        
+
+        // Recivir answer siempre del servidor conteniendo mensajes en general AQUI
+
+        printf(" 1 -> Enviar mensaje nuevo al chat general\n");
+        printf(" 2 -> Regresar al menu principal\n");
+        printf(" Ingresa la opción que deseas ejecutar (1|2):  ");
+        scanf("%d", &valor_opcion_chat_general);
+        printf("\n");
+
+        if (valor_opcion_chat_general < 1 || valor_opcion_chat_general > 2)
+        {
+          printf("\nERROR: Ingrese una opción valida\n\n");
+        }
+        else if (valor_opcion_chat_general == 1)
+        {
+          // Lógica para enviar un mensaje nuevo al chat general
+        }
+      }
+      
     }
     else if (opcion_menu == 2) // Inbox
     {
