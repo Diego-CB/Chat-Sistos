@@ -245,6 +245,7 @@ void *manejar_comunicaciones(void* arg)
       pthread_mutex_lock(&structure_mutex);
       for (int i = 0; i < num_clientes; i++) {
         if (clientes[i].stats == 1) {
+          printf("msm %s\n", contenido_mensaje);
           if (send(clientes[i].sockfd, respuesta_mensaje_broadcast_buf, respuesta_mensaje_broadcast_size, 0) == -1) {
             perror(" > Error en send");
             exit(EXIT_FAILURE);

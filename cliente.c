@@ -107,6 +107,7 @@ int main(int argc, char *argv[]) {
           printf(" 2 -> Regresar al menu principal\n");
           printf(" Ingresa la opción que deseas ejecutar (1|2):  ");
           scanf("%d", &valor_opcion_chat_general);
+          getchar(); // limpiar el búfer del teclado
           printf("\n");
 
           if (valor_opcion_chat_general < 1 || valor_opcion_chat_general > 2)
@@ -117,8 +118,10 @@ int main(int argc, char *argv[]) {
           {
             char nuevoMensaje[1024];
             printf(" Ingresa el mensaje:  ");
-            scanf("%s", nuevoMensaje);
+            fgets(nuevoMensaje, 1024, stdin);
+            nuevoMensaje[strcspn(nuevoMensaje, "\n")] = 0;
             printf("\n");
+
             ChatSistOS__Message nuevo_mensaje_general = CHAT_SIST_OS__MESSAGE__INIT;
             nuevo_mensaje_general.message_private = 0;
             nuevo_mensaje_general.message_sender = user_name; 
@@ -154,7 +157,7 @@ int main(int argc, char *argv[]) {
     }
     else if (opcion_menu == 2) // Inbox
     {
-      user_option_menu.op = 1;
+      user_option_menu.op = 2;
       pid_t pid = fork();
 
       if (pid == 0){ // hijo
@@ -178,6 +181,7 @@ int main(int argc, char *argv[]) {
           printf(" 2 -> Regresar al menu principal\n");
           printf(" Ingresa la opción que deseas ejecutar (1|2):  ");
           scanf("%d", &valor_opcion_chat_general);
+          getchar(); // limpiar el búfer del teclado
           printf("\n");
 
           if (valor_opcion_chat_general < 1 || valor_opcion_chat_general > 2)
@@ -188,8 +192,10 @@ int main(int argc, char *argv[]) {
           {
             char nuevoMensaje[1024];
             printf(" Ingresa el mensaje:  ");
-            scanf("%s", nuevoMensaje);
+            fgets(nuevoMensaje, 1024, stdin);
+            nuevoMensaje[strcspn(nuevoMensaje, "\n")] = 0;
             printf("\n");
+
             ChatSistOS__Message nuevo_mensaje_priv = CHAT_SIST_OS__MESSAGE__INIT;
             nuevo_mensaje_priv.message_private = 1;
             nuevo_mensaje_priv.message_sender = user_name; 
@@ -199,13 +205,17 @@ int main(int argc, char *argv[]) {
             user_option_menu.message = &nuevo_mensaje_priv;
 
             //mandar el user option al servidor
-            ChatSistOS__Answer* respuesta = send_user_option(user_option_menu, sock);
-
-            if (respuesta -> response_status_code == 200) {
-              printf(" * enviado *\n");
-            } else {
-              printf("Error No se ha enviado el mensaje\n");
-            } 
+            //mandar el user option al servidor
+            // Serializar mensaje UserOption
+            size_t user_option_size = chat_sist_os__user_option__get_packed_size(&user_option_menu);
+            uint8_t *user_option_buf = malloc(user_option_size);
+            chat_sist_os__user_option__pack(&user_option_menu, user_option_buf);
+            
+            // Enviar mensaje
+            if (send(sock, user_option_buf, user_option_size, 0) == -1) {
+              perror("send");
+              exit(EXIT_FAILURE);
+            }
           }
         }
         kill(pid, SIGKILL); // Enviar señal SIGKILL al proceso hijo
