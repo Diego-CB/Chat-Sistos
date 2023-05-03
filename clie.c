@@ -79,9 +79,7 @@ int main(int argc, char *argv[]) {
   } else {
     printf("Error al crear usuario: %s\n", answer->response_message);
   }
-  
-  return 0;
-}
+
   /*
   // Menu para recibir acciones del usuario
   
@@ -92,6 +90,26 @@ int main(int argc, char *argv[]) {
     5. Desplegar información de un usuario en particular.
     6. Ayuda.
     7. Salir.
+  */
+  int opcion_menu = 0;
+  while (opcion_menu != 7) {
+    printf("\n");
+    printf("1. Chatear con todos los usuarios (broadcasting).\n");
+    printf("2. Enviar y recibir mensajes directos, privados, aparte del chat general.\n");
+    printf("3. Cambiar de status.\n");
+    printf("4. Listar los usuarios conectados al sistema de chat.\n");
+    printf("5. Desplegar información de un usuario en particular.\n");
+    printf("6. Ayuda.\n");
+    printf("7. Salir.\n");
+    printf("-> ");
+    scanf("%d", &opcion_menu);
+    if (opcion_menu == 1){}
+    else if(opcion_menu == 2){}
+  }
+  
+  return 0;
+}
+  /*
   int opcion_menu = 0;
   while (opcion_menu != 7)
   {

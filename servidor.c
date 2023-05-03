@@ -1,15 +1,16 @@
 #include "./Protocol/chat.pb-c.h"
-#include <netdb.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+// #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/ip.h>
 #include <sys/types.h>
 #include <time.h>
-#include <pthread.h>
 
 #define LIMITE_SESIONES 10
 #define BUFFER_SZ 2048
@@ -54,8 +55,8 @@ int main(int argc, char **argv)
 
   // Vincular el socket con la dirección IP y el puerto
   if (bind(server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-      printf(" > Error al vincular el socket");
-      return 1;
+    printf(" > Error al vincular el socket");
+    return 1;
   }
 
   // Esperar conexiones entrantes
@@ -81,14 +82,21 @@ int main(int argc, char **argv)
 
     // AQUI RECIBE EL USER OPTION PARA CREAR USUARIO
     uint8_t buf[4096];
-    ssize_t bytes_recieved = recv(sock, buf, sizeof(buf), 0); // VERIFICAR PQ AQUI VA EL SOCKET DE USUARIO
+    ssize_t bytes_recieved = recv(client_sock, buf, sizeof(buf), 0); // VERIFICAR PQ AQUI VA EL SOCKET DE USUARIO
     if (bytes_recieved == -1) {
         perror("> Error en recv");
         exit(EXIT_FAILURE);
     }
 
-    ChatSistOS__UserOption *user_option_createUser = chat_sist_os__user_option__unpack(NULL, bytes_recieved, buf)
-    user_option_createUser.op = 2; // Crear nuevo usuario
+    ChatSistOS__UserOption *user_option_createUser = chat_sist_os__user_option__unpack(NULL, bytes_recieved, buf);
+    user_option_createUser -> op = 2; // Crear nuevo usuario
+
+    // New User Structure
+    ChatSistOS__NewUser *nuevo_usuario = user_option_createUser -> createuser;
+
+    char* ip_usuario = nuevo_usuario -> ip;
+    char* nombre_usuario = nuevo_usuario -> username;
+
 
     // FALTA SACAR EL NEW USER DE EL USER OPTION
 
@@ -99,23 +107,16 @@ int main(int argc, char **argv)
       clientes[num_clientes].sockfd = client_sock;
       clientes[num_clientes].clienteADDR = client_addr;
       clientes[num_clientes].stats = 1;      
-      clientes[num_clientes].name = NULL; //cambiar por el del usuario
-      clientes[num_clientes].direccion_ip = NULL; //cambiar por el del usuario
+      clientes[num_clientes].name = nombre_usuario; //cambiar por el del usuario
+      clientes[num_clientes].direccion_ip = ip_usuario; //cambiar por el del usuario
 
       num_clientes++; // suma al contador de clientes
-
-      // Crear un hilo para manejar conexiones con ese cliente
-      pthread_t hilo;
-      if (pthread_create(&hilo, NULL, manejar_comunicaciones, (void*)&clientes[num_clientes-1]) < 0) {
-        printf(" > Error al crear un nuevo hilo para manejar las comunicaciones con el cliente");
-        continue;
-      }
 
       // ARMAR ANSWER PARA ENVIAR Y DECIR SI SE LOGRO CREAR USER
       ChatSistOS__Answer respuesta_success_userCreate = CHAT_SIST_OS__ANSWER__INIT;
       respuesta_success_userCreate.op = 2; // Opción de crear usuario VERIFICAR
-      respuesta_success_userCreate.responde_status_code = 200
-      respuesta_success_userCreate.response_message = " > Usuario creado con exito!"
+      respuesta_success_userCreate.response_status_code = 200;
+      respuesta_success_userCreate.response_message = " > Usuario creado con exito!";
 
       //ENVIARLE AL USUARIO LA RESPUESTA
       //serializar
@@ -124,19 +125,28 @@ int main(int argc, char **argv)
       chat_sist_os__answer__pack(&respuesta_success_userCreate, respuesta_success_userCreate_buf);
 
       //enviar - FALTA MODIFICAR SOCK POR VALORES EN SERVIDOR
-      if (send(sock, respuesta_success_userCreate_buf, respuesta_success_userCreate_size, 0) == -1) {
+      if (send(client_sock, respuesta_success_userCreate_buf, respuesta_success_userCreate_size, 0) == -1) {
         perror(" > Error en send");
         exit(EXIT_FAILURE);
       }
 
+      /*
+      // IMLEMENTACION DE THREADS
+      // Crear un hilo para manejar conexiones con ese cliente
+      pthread_t hilo;
+      if (pthread_create(&hilo, NULL, manejar_comunicaciones, (void*)&clientes[num_clientes-1]) < 0) {
+        printf(" > Error al crear un nuevo hilo para manejar las comunicaciones con el cliente");
+        continue;
+      }
+      */
 
     } else {
 
       // ARMAR ANSWER PARA ENVIAR Y DECIR NO SE LOGRO CREAR USER
       ChatSistOS__Answer respuesta_failed_userCreate = CHAT_SIST_OS__ANSWER__INIT;
       respuesta_failed_userCreate.op = 2; // Opción de crear usuario VERIFICAR
-      respuesta_failed_userCreate.response_status_code = 400
-      respuesta_failed_userCreate.response_message = " > Error: Usuario no se ha podido crear por alta demanda."
+      respuesta_failed_userCreate.response_status_code = 400;
+      respuesta_failed_userCreate.response_message = " > Error: Usuario no se ha podido crear por alta demanda.";
 
       //ENVIARLE AL USUARIO LA RESPUESTA
       //serializar
@@ -145,7 +155,7 @@ int main(int argc, char **argv)
       chat_sist_os__answer__pack(&respuesta_failed_userCreate, respuesta_failed_userCreate_buf);
 
       //enviar - FALTA MODIFICAR SOCK POR VALORES EN SERVIDOR
-      if (send(sock, respuesta_failed_userCreate_buf, respuesta_failed_userCreate_size, 0) == -1) {
+      if (send(client_sock, respuesta_failed_userCreate_buf, respuesta_failed_userCreate_size, 0) == -1) {
         perror(" > Error en send");
         exit(EXIT_FAILURE);
       }
@@ -155,6 +165,13 @@ int main(int argc, char **argv)
       printf(" > Demasiados clientes conectados, la conexión del nuevo cliente fue cerrada");
     }
 
+    int i;
+    for (i = 0; i < num_clientes; i++){
+      printf("Cliente %d:\n", i);
+      printf("Nombre: %s\n", clientes[i].name);
+      printf("ip: %s\n", clientes[i].direccion_ip);
+    }
+  }
   // se deberia de recibir el useroption AQUI
     /*
     Recibo user option
@@ -168,17 +185,18 @@ int main(int argc, char **argv)
     if op == 1
     elif op == 2
     elif op == 3
-    */
+
+  // CODIGO QUE TENIAMOS ANTES
 
   // Recibir y enviar mensajes con el cliente
   char buffer[1024];
   int bytes_received;
   while ((bytes_received = recv(client_sock, buffer, sizeof(buffer), 0)) > 0) {
-      printf("Mensaje recibido: %s", buffer);
+    printf("Mensaje recibido: %s", buffer);
 
-      // Enviar una respuesta al cliente
-      char respuesta[] = "Mensaje recibido correctamente";
-      send(client_sock, respuesta, strlen(respuesta), 0);
+    // Enviar una respuesta al cliente
+    char respuesta[] = "Mensaje recibido correctamente";
+    send(client_sock, respuesta, strlen(respuesta), 0);
   }
 
   // Eliminar la estructura del cliente de la lista de
@@ -197,6 +215,7 @@ int main(int argc, char **argv)
   // Cerrar los sockets
   close(client_sock);
   close(server_sock);
+    */
 
   return 0;
 }
