@@ -4,6 +4,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <signal.h>
+#include <sys/wait.h>
 
 
 // Definir las estructuras del protocolo
@@ -76,9 +78,6 @@ int main(int argc, char *argv[]) {
   int opcion_menu = 0;
   while (opcion_menu != 7) 
   {
-    // Print de mensajes recibidos
-    ver_mensajes_recibidos(sock);
-
     // Obtener input del usuario
     opcion_menu = get_user_input();
 
@@ -88,90 +87,129 @@ int main(int argc, char *argv[]) {
     if (opcion_menu == 1) // Broadcast
     {
       user_option_menu.op = 1;
-      int valor_opcion_chat_general = 0;
-      while (valor_opcion_chat_general != 2) {
+      pid_t pid = fork();
 
-        // AQUI DEBE DE IMPRIMIR MENSAJES
-
-        printf(" 1 -> Enviar mensaje nuevo al chat general\n");
-        printf(" 2 -> Regresar al menu principal\n");
-        printf(" Ingresa la opción que deseas ejecutar (1|2):  ");
-        scanf("%d", &valor_opcion_chat_general);
-        printf("\n");
-
-        if (valor_opcion_chat_general < 1 || valor_opcion_chat_general > 2)
+      if (pid == 0){ // hijo
+        while (1)
         {
-          printf("\nERROR: Ingrese una opción valida\n\n");
-        }
-        else if (valor_opcion_chat_general == 1)
-        {
-          char nuevoMensaje[1024];
-          printf(" Ingresa el mensaje:  ");
-          scanf("%s", nuevoMensaje);
-          printf("\n");
-          ChatSistOS__Message nuevo_mensaje_general = CHAT_SIST_OS__MESSAGE__INIT;
-          nuevo_mensaje_general.message_private = 0;
-          nuevo_mensaje_general.message_sender = user_name; 
-          nuevo_mensaje_general.message_content = nuevoMensaje;
-
-          user_option_menu.message = &nuevo_mensaje_general;
-
-          //mandar el user option al servidor
-          ChatSistOS__Answer* respuesta = send_user_option(user_option_menu, sock);
-
-          if (respuesta -> response_status_code == 200) {
-            printf(" * enviado *\n");
-          } else {
-            printf("Error No se ha enviado el mensaje\n");
-          } 
+         ver_mensajes_recibidos(sock);
         }
       }
-      
+      else
+      {
+        int valor_opcion_chat_general = 0;
+        while (valor_opcion_chat_general != 2) {
+
+          valor_opcion_chat_general = 0;
+          // AQUI DEBE DE IMPRIMIR MENSAJES
+
+          printf(" 1 -> Enviar mensaje nuevo al chat general\n");
+          printf(" 2 -> Regresar al menu principal\n");
+          printf(" Ingresa la opción que deseas ejecutar (1|2):  ");
+          scanf("%d", &valor_opcion_chat_general);
+          printf("\n");
+
+          if (valor_opcion_chat_general < 1 || valor_opcion_chat_general > 2)
+          {
+            printf("\nERROR: Ingrese una opción valida\n\n");
+          }
+          else if (valor_opcion_chat_general == 1)
+          {
+            char nuevoMensaje[1024];
+            printf(" Ingresa el mensaje:  ");
+            scanf("%s", nuevoMensaje);
+            printf("\n");
+            ChatSistOS__Message nuevo_mensaje_general = CHAT_SIST_OS__MESSAGE__INIT;
+            nuevo_mensaje_general.message_private = 0;
+            nuevo_mensaje_general.message_sender = user_name; 
+            nuevo_mensaje_general.message_content = nuevoMensaje;
+
+            user_option_menu.message = &nuevo_mensaje_general;
+
+            //mandar el user option al servidor
+            // Serializar mensaje UserOption
+            size_t user_option_size = chat_sist_os__user_option__get_packed_size(&user_option_menu);
+            uint8_t *user_option_buf = malloc(user_option_size);
+            chat_sist_os__user_option__pack(&user_option_menu, user_option_buf);
+            
+            // Enviar mensaje
+            if (send(sock, user_option_buf, user_option_size, 0) == -1) {
+              perror("send");
+              exit(EXIT_FAILURE);
+            }
+
+            /*
+
+            if (respuesta -> response_status_code == 200) {
+              printf(" * enviado *\n");
+            } else {
+              printf("Error No se ha enviado el mensaje\n");
+            } 
+            */
+          }
+        }
+        kill(pid, SIGKILL); // Enviar señal SIGKILL al proceso hijo
+        waitpid(pid, NULL, 0); // Esperar a que el proceso hijo termine
+      }
     }
     else if (opcion_menu == 2) // Inbox
     {
-      user_option_menu.op = 2;
-      int valor_opcion_chat_general = 0;
-      while (valor_opcion_chat_general != 2) {
+      user_option_menu.op = 1;
+      pid_t pid = fork();
 
-        char cliente_para_mensaje_priv[101];
-        printf(" A quien deseas enviar el mensaje:  ");
-        scanf("%s", cliente_para_mensaje_priv);
-        printf("\n");
-
-        printf(" 1 -> Enviar otro mensaje a %s\n", cliente_para_mensaje_priv);
-        printf(" 2 -> Regresar al menu principal\n");
-        printf(" Ingresa la opción que deseas ejecutar (1|2):  ");
-        scanf("%d", &valor_opcion_chat_general);
-        printf("\n");
-
-        if (valor_opcion_chat_general < 1 || valor_opcion_chat_general > 2)
+      if (pid == 0){ // hijo
+        while (1)
         {
-          printf("\nERROR: Ingrese una opción valida\n\n");
+         ver_mensajes_recibidos(sock);
         }
-        else if (valor_opcion_chat_general == 1)
-        {
-          char nuevoMensaje[1024];
-          printf(" Ingresa el mensaje:  ");
-          scanf("%s", nuevoMensaje);
+      }
+      else
+      {
+        user_option_menu.op = 2;
+        int valor_opcion_chat_general = 0;
+        while (valor_opcion_chat_general != 2) {
+
+          char cliente_para_mensaje_priv[101];
+          printf(" A quien deseas enviar el mensaje:  ");
+          scanf("%s", cliente_para_mensaje_priv);
           printf("\n");
-          ChatSistOS__Message nuevo_mensaje_priv = CHAT_SIST_OS__MESSAGE__INIT;
-          nuevo_mensaje_priv.message_private = 1;
-          nuevo_mensaje_priv.message_sender = user_name; 
-          nuevo_mensaje_priv.message_content = nuevoMensaje;
-          nuevo_mensaje_priv.message_destination = cliente_para_mensaje_priv;
 
-          user_option_menu.message = &nuevo_mensaje_priv;
+          printf(" 1 -> Enviar otro mensaje a %s\n", cliente_para_mensaje_priv);
+          printf(" 2 -> Regresar al menu principal\n");
+          printf(" Ingresa la opción que deseas ejecutar (1|2):  ");
+          scanf("%d", &valor_opcion_chat_general);
+          printf("\n");
 
-          //mandar el user option al servidor
-          ChatSistOS__Answer* respuesta = send_user_option(user_option_menu, sock);
+          if (valor_opcion_chat_general < 1 || valor_opcion_chat_general > 2)
+          {
+            printf("\nERROR: Ingrese una opción valida\n\n");
+          }
+          else if (valor_opcion_chat_general == 1)
+          {
+            char nuevoMensaje[1024];
+            printf(" Ingresa el mensaje:  ");
+            scanf("%s", nuevoMensaje);
+            printf("\n");
+            ChatSistOS__Message nuevo_mensaje_priv = CHAT_SIST_OS__MESSAGE__INIT;
+            nuevo_mensaje_priv.message_private = 1;
+            nuevo_mensaje_priv.message_sender = user_name; 
+            nuevo_mensaje_priv.message_content = nuevoMensaje;
+            nuevo_mensaje_priv.message_destination = cliente_para_mensaje_priv;
 
-          if (respuesta -> response_status_code == 200) {
-            printf(" * enviado *\n");
-          } else {
-            printf("Error No se ha enviado el mensaje\n");
-          } 
+            user_option_menu.message = &nuevo_mensaje_priv;
+
+            //mandar el user option al servidor
+            ChatSistOS__Answer* respuesta = send_user_option(user_option_menu, sock);
+
+            if (respuesta -> response_status_code == 200) {
+              printf(" * enviado *\n");
+            } else {
+              printf("Error No se ha enviado el mensaje\n");
+            } 
+          }
         }
+        kill(pid, SIGKILL); // Enviar señal SIGKILL al proceso hijo
+        waitpid(pid, NULL, 0); // Esperar a que el proceso hijo termine
       }
     }
     else if (opcion_menu == 3) // Cambiar estatus
@@ -298,30 +336,29 @@ void ver_mensajes_recibidos(int sock)
   // Recibir mensajes
   uint8_t buffer_mensaje[4096];
   ssize_t bytes_mensaje = recv(sock, buffer_mensaje, sizeof(buffer_mensaje), 0);
-  if (bytes_mensaje < 0) {
+  
+  if (bytes_mensaje != -1) {
     printf("---- Mensajes Recibido ----\n");
 
     // Deserializar mensaje Answer
     ChatSistOS__Answer *answer_mensaje_recibido = chat_sist_os__answer__unpack(NULL, bytes_mensaje, buffer_mensaje);
     if (answer_mensaje_recibido -> response_status_code == 200)
     {
-      
-      if (strcmp(answer_mensaje_recibido -> response_message, "no hay mensajes\n") != 0) {
-        ChatSistOS__Message *mensaje_recibido = answer_mensaje_recibido -> message;
-        char mensaje_text[1024];
-        strcpy(mensaje_text, mensaje_recibido -> message_content);
 
-        // Mensaje privado
-        if (mensaje_recibido -> message_private)
-        {
-          char sender[101];
-          strcpy(sender, mensaje_recibido -> message_sender);
-          printf("> [%s]: %s\n", (char*) sender, (char*) mensaje_recibido);
-        }
-        else
-        {
-          printf("> [Broadcast]: %s\n", (char *) mensaje_recibido);
-        }
+      ChatSistOS__Message *mensaje_recibido = answer_mensaje_recibido -> message;
+      char mensaje_text[1024];
+      strcpy(mensaje_text, mensaje_recibido->message_content);
+
+      // Mensaje privado
+      if (mensaje_recibido -> message_private)
+      {
+        char sender[101];
+        strcpy(sender, mensaje_recibido -> message_sender);
+        printf("> [%s]: %s\n", sender, mensaje_text);
+      }
+      else
+      {
+        printf("> [Broadcast]: %s\n", mensaje_text);
       }
     }
   }

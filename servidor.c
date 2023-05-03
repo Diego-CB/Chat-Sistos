@@ -187,22 +187,6 @@ void *manejar_comunicaciones(void* arg)
 
   // Manejar comunicaciones
   while (1) {
-    // Mandar mensajes default
-    ChatSistOS__Answer mensaje_default = CHAT_SIST_OS__ANSWER__INIT;
-    mensaje_default.op = 1;
-    mensaje_default.response_message = "no hay mensajes\n";
-
-    size_t mensaje_default_size = chat_sist_os__answer__get_packed_size(&mensaje_default);
-    uint8_t *mensaje_default_size_buf = malloc(mensaje_default_size);
-    chat_sist_os__answer__pack(&mensaje_default, mensaje_default_size_buf);
-
-    
-    //enviar
-    if (send(client_sockfd, mensaje_default_size_buf, mensaje_default_size, 0) == -1) {
-      perror(" > Error en send");
-      exit(EXIT_FAILURE);
-    }
-
     // Recibir mensaje del cliente
     uint8_t buf[4096];
     ssize_t bytes_recieved = recv(client_sockfd, buf, sizeof(buf), 0);
@@ -260,7 +244,7 @@ void *manejar_comunicaciones(void* arg)
       //enviar a todos los activos que no sean sender
       pthread_mutex_lock(&structure_mutex);
       for (int i = 0; i < num_clientes; i++) {
-        if (clientes[i].stats == 1 && strcmp(clientes[i].name, sender_mensaje_general) != 0) {
+        if (clientes[i].stats == 1) {
           if (send(clientes[i].sockfd, respuesta_mensaje_broadcast_buf, respuesta_mensaje_broadcast_size, 0) == -1) {
             perror(" > Error en send");
             exit(EXIT_FAILURE);
