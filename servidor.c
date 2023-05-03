@@ -251,7 +251,9 @@ void *manejar_comunicaciones(void* arg)
       }
       pthread_mutex_unlock(&structure_mutex);
 
-      //ARMAR ANSWER PARA SENDER °°
+      //ARMAR ANSWER PARA SENDER
+      respuesta_al_cliente.response_status_code = 200;
+      respuesta_al_cliente.response_message = " > Se ha enviado el mensaje con exito.\n";
     }
     else if (option == 2)
     {
@@ -283,7 +285,9 @@ void *manejar_comunicaciones(void* arg)
       }
 
       if (!user_found) {
-        // ANSWER DE NO LO LOGRE MANDAR AL DESTINATARIO PARA EL SENDER  °°
+        // enviarle al sender que no se logro enviar a destinatario
+        respuesta_al_cliente.response_status_code = 400;
+        respuesta_al_cliente.response_message = " > No se ha logrado enviar el mensaje al destinatario.\n";
 
       } else {
         // answer de si lo encontro al reciever para que tenga el mensaje
@@ -304,7 +308,9 @@ void *manejar_comunicaciones(void* arg)
           exit(EXIT_FAILURE);
         }
 
-        //ANSWER DE QUE SI LO MANDE AL SENDER °°
+        // enviarle al sender que si se logro enviar a destinatario
+        respuesta_al_cliente.response_status_code = 200;
+        respuesta_al_cliente.response_message = " > Se ha enviado el mensaje con exito.\n";
       }
 
       pthread_mutex_unlock(&structure_mutex);
