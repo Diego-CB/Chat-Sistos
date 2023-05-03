@@ -74,7 +74,7 @@ int main(int argc, char **argv)
 
   // Iniciar mutex
   pthread_mutex_init(&structure_mutex, NULL);
-
+  printf("\nSERVER RUNNING AT PORT %d!\n", puerto);
   // Aceptar conexiones entrantes
   while (1) {
     // Aceptar la conexion entrante
@@ -101,7 +101,9 @@ int main(int argc, char **argv)
     ChatSistOS__NewUser *nuevo_usuario = user_option_createUser -> createuser;
 
     char* ip_usuario = nuevo_usuario -> ip;
-    char nombre_usuario[101] = nuevo_usuario -> username;
+    
+    char nombre_usuario[101];    
+    strcpy(nombre_usuario, nuevo_usuario -> username);
 
 
     // Check if username already exists in the array
@@ -175,14 +177,6 @@ int main(int argc, char **argv)
       printf(" > Demasiados clientes conectados, la conexion del nuevo cliente fue cerrada");
     }
 
-    /*
-    int i;
-    for (i = 0; i < num_clientes; i++){
-      printf("Cliente %d:\n", i);
-      printf("Nombre: %s\n", clientes[i].name);
-      printf("ip: %s\n", clientes[i].direccion_ip);
-    }
-    */
   }
   
   return 0;
@@ -247,6 +241,18 @@ void *manejar_comunicaciones(void* arg)
         }
 
         pthread_mutex_unlock(&structure_mutex);
+
+        int i;
+        //mutex lock
+        pthread_mutex_lock(&structure_mutex);
+        for (i = 0; i < num_clientes; i++){
+          printf("--------------------------\n");
+          printf("Cliente %d:\n", i);
+          printf("Nombre: %s\n", clientes[i].name);
+          printf("stats: %d\n", clientes[i].stats);
+        }
+        pthread_mutex_unlock(&structure_mutex);
+        //mutex unlock
 
         break;
       case 4:

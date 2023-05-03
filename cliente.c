@@ -3,6 +3,8 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <unistd.h>
+
 
 // Definir las estructuras del protocolo
 #include "./Protocol/chat.pb-c.h"
@@ -148,7 +150,7 @@ int main(int argc, char *argv[]) {
         ChatSistOS__UsersOnline *decoded_users_online = chat_sist_os__users_online__unpack(
           NULL,
           buffer_users_online,
-          sizeof(buffer_users_online)
+          (int) sizeof(buffer_users_online)
         );
 
         // Print del listado
@@ -157,7 +159,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < decoded_users_online -> n_users; i++)
         {
           ChatSistOS__User *user = decoded_users_online -> users[i];
-          printf("%d: %s (ip: %d)\n", i+1, user -> user_name, user -> user_ip);
+          printf("%d: %s (ip: %s)\n", i+1, user -> user_name, user -> user_ip);
         }
       }
     }
@@ -189,7 +191,7 @@ int main(int argc, char *argv[]) {
       ChatSistOS__User *user_option_5 = respuesta -> user;
 
       // Print de info del usuario
-      printf("%s (ip: %d)\n", user_option_5 -> user_name, user_option_5 -> user_ip);
+      printf("%s (ip: %s)\n", user_option_5 -> user_name, user_option_5 -> user_ip);
     }
     else if(opcion_menu == 6) // Imprimir ayuda
     {
