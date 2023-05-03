@@ -91,6 +91,8 @@ int main(int argc, char *argv[]) {
       int valor_opcion_chat_general = 0;
       while (valor_opcion_chat_general != 2) {
 
+        // AQUI DEBE DE IMPRIMIR MENSAJES
+
         printf(" 1 -> Enviar mensaje nuevo al chat general\n");
         printf(" 2 -> Regresar al menu principal\n");
         printf(" Ingresa la opción que deseas ejecutar (1|2):  ");
@@ -301,20 +303,25 @@ void ver_mensajes_recibidos(int sock)
 
     // Deserializar mensaje Answer
     ChatSistOS__Answer *answer_mensaje_recibido = chat_sist_os__answer__unpack(NULL, bytes_mensaje, buffer_mensaje);
-    if (answer_mensaje_recibido ->response_status_code == 200)
+    if (answer_mensaje_recibido -> response_status_code == 200)
     {
-      ChatSistOS__Message *mensaje_recibido = answer_mensaje_recibido -> message;
-      char* mensaje_text = mensaje_recibido -> message_content;
+      
+      if (strcmp(answer_mensaje_recibido -> response_message, "no hay mensajes\n") != 0) {
+        ChatSistOS__Message *mensaje_recibido = answer_mensaje_recibido -> message;
+        char mensaje_text[1024];
+        strcpy(mensaje_text, mensaje_recibido -> message_content);
 
-      // Mensaje privado
-      if (mensaje_recibido -> message_private)
-      {
-        char* sender  = mensaje_recibido -> message_sender;
-        printf("> [%s]: %s\n", sender, mensaje_recibido);
-      }
-      else
-      {
-        printf("> [Broadcast]: %s\n", mensaje_recibido);
+        // Mensaje privado
+        if (mensaje_recibido -> message_private)
+        {
+          char sender[101];
+          strcpy(sender, mensaje_recibido -> message_sender);
+          printf("> [%s]: %s\n", (char*) sender, (char*) mensaje_recibido);
+        }
+        else
+        {
+          printf("> [Broadcast]: %s\n", (char *) mensaje_recibido);
+        }
       }
     }
   }

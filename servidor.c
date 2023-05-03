@@ -183,8 +183,26 @@ void *manejar_comunicaciones(void* arg)
   info_cliente_ *cliente = (info_cliente_*)arg;
   int client_sockfd = cliente->sockfd;
 
+  
+
   // Manejar comunicaciones
   while (1) {
+    // Mandar mensajes default
+    ChatSistOS__Answer mensaje_default = CHAT_SIST_OS__ANSWER__INIT;
+    mensaje_default.op = 1;
+    mensaje_default.response_message = "no hay mensajes\n";
+
+    size_t mensaje_default_size = chat_sist_os__answer__get_packed_size(&mensaje_default);
+    uint8_t *mensaje_default_size_buf = malloc(mensaje_default_size);
+    chat_sist_os__answer__pack(&mensaje_default, mensaje_default_size_buf);
+
+    
+    //enviar
+    if (send(client_sockfd, mensaje_default_size_buf, mensaje_default_size, 0) == -1) {
+      perror(" > Error en send");
+      exit(EXIT_FAILURE);
+    }
+
     // Recibir mensaje del cliente
     uint8_t buf[4096];
     ssize_t bytes_recieved = recv(client_sockfd, buf, sizeof(buf), 0);
@@ -218,7 +236,7 @@ void *manejar_comunicaciones(void* arg)
       char sender_mensaje_general[101];
       strcpy(sender_mensaje_general, mensaje_recibido_general->message_sender);
       char contenido_mensaje[1024];
-      strcpy(contenido_mensaje, mensaje_recibido_general->message_content)
+      strcpy(contenido_mensaje, mensaje_recibido_general->message_content);
 
       ChatSistOS__Message mensaje_a_enviar_general = CHAT_SIST_OS__MESSAGE__INIT;
       mensaje_a_enviar_general.message_private = 0;
@@ -263,9 +281,9 @@ void *manejar_comunicaciones(void* arg)
       char sender_mensaje_general[101];
       strcpy(sender_mensaje_general, mensaje_recibido_priv->message_sender);
       char contenido_mensaje[1024];
-      strcpy(contenido_mensaje, mensaje_recibido_priv->message_content)
+      strcpy(contenido_mensaje, mensaje_recibido_priv->message_content);
       char recieves_mensaje_general[101];
-      strcpy(recieves_mensaje_general, mensaje_recibido_priv->message_destination)
+      strcpy(recieves_mensaje_general, mensaje_recibido_priv->message_destination);
 
       ChatSistOS__Message mensaje_a_enviar_priv = CHAT_SIST_OS__MESSAGE__INIT;
       mensaje_a_enviar_priv.message_private = 1;
@@ -275,16 +293,16 @@ void *manejar_comunicaciones(void* arg)
 
       //enviar a el usuario destinatario
       pthread_mutex_lock(&structure_mutex);
-      bool user_found = false;
+      int user_found = 0;
       int indice_user = 0;
       for (int i = 0; i < num_clientes; i++) {
         if (clientes[i].stats == 1 && strcmp(clientes[i].name, recieves_mensaje_general) == 0) {
-          user_found = true; 
+          user_found++; 
           indice_user = i;
         }
       }
 
-      if (!user_found) {
+      if (user_found == 0) {
         // enviarle al sender que no se logro enviar a destinatario
         respuesta_al_cliente.response_status_code = 400;
         respuesta_al_cliente.response_message = " > No se ha logrado enviar el mensaje al destinatario.\n";
