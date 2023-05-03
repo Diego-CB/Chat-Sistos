@@ -7,11 +7,12 @@
 // Definir las estructuras del protocolo
 #include "./Protocol/chat.pb-c.h"
 
-// Prototipes de funciones a usar
+// Prototipos de funciones a usar
 void print_ayuda();
 int get_user_input();
 ChatSistOS__Answer* send_user_option(ChatSistOS__UserOption, int);
 
+// Main
 int main(int argc, char *argv[]) {
 
   // Variables pasadas como parametro de consola
@@ -124,6 +125,7 @@ int main(int argc, char *argv[]) {
     }
     else if(opcion_menu == 4) // Lista de usuarios conectados
     {
+      // Llenar UserOption
       user_option_menu.op = 4;
       ChatSistOS__UserList listar_usuarios_userlist_todos = CHAT_SIST_OS__USER_LIST__INIT;
 
@@ -136,6 +138,28 @@ int main(int argc, char *argv[]) {
       // Mandar user Option
       ChatSistOS__Answer* respuesta = send_user_option(user_option_menu, sock);
 
+      // Verificar respueta del server
+      if (respuesta -> response_status_code != 200) {
+        printf("Error al obtener lista dde usuarios conectados\n");
+        continue;
+      }
+
+      // Desempquetar buffer
+      uint8_t buffer_users_online[4096];
+      ChatSistOS__UsersOnline *decoded_users_online = chat_sist_os__users_online__unpack(
+        NULL,
+        buffer_users_online,
+        sizeof(buffer_users_online)
+      );
+
+      // Print del listado
+      printf("Numero de usuarios en lineaL %d\n", decoded_users_online -> n_users);
+      printf("---- Usuarios en Linea ----\n");
+      for (int i = 0; i < decoded_users_online -> n_users; i++)
+      {
+        ChatSistOS__User *user = decoded_users_online -> users[i];
+        printf("%d: %s (ip: %d)\n", i+1, user -> user_name, user -> user_ip);
+      }
     }
     else if(opcion_menu == 5) // Info de usuario particular
     {
@@ -155,6 +179,17 @@ int main(int argc, char *argv[]) {
       // Mandar user Option
       ChatSistOS__Answer* respuesta = send_user_option(user_option_menu, sock);
 
+      // Verificar respueta del server
+      if (respuesta -> response_status_code != 200) {
+        printf("Error al obtener lista dde usuarios conectados\n");
+        continue;
+      }
+
+      // Desempaquetar usuario
+      ChatSistOS__User *user_option_5 = respuesta -> user;
+
+      // Print de info del usuario
+      printf("%s (ip: %d)\n", user_option_5 -> user_name, user_option_5 -> user_ip);
     }
     else if(opcion_menu == 6) // Imprimir ayuda
     {
