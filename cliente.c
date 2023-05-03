@@ -142,23 +142,23 @@ int main(int argc, char *argv[]) {
       if (respuesta -> response_status_code != 200) {
         printf("Error al obtener lista dde usuarios conectados\n");
         continue;
-      }
+      } else {
+        // Desempquetar buffer
+        uint8_t buffer_users_online[4096];
+        ChatSistOS__UsersOnline *decoded_users_online = chat_sist_os__users_online__unpack(
+          NULL,
+          buffer_users_online,
+          sizeof(buffer_users_online)
+        );
 
-      // Desempquetar buffer
-      uint8_t buffer_users_online[4096];
-      ChatSistOS__UsersOnline *decoded_users_online = chat_sist_os__users_online__unpack(
-        NULL,
-        buffer_users_online,
-        sizeof(buffer_users_online)
-      );
-
-      // Print del listado
-      printf("Numero de usuarios en lineaL %d\n", decoded_users_online -> n_users);
-      printf("---- Usuarios en Linea ----\n");
-      for (int i = 0; i < decoded_users_online -> n_users; i++)
-      {
-        ChatSistOS__User *user = decoded_users_online -> users[i];
-        printf("%d: %s (ip: %d)\n", i+1, user -> user_name, user -> user_ip);
+        // Print del listado
+        printf("Numero de usuarios en lineaL %d\n", decoded_users_online -> n_users);
+        printf("---- Usuarios en Linea ----\n");
+        for (int i = 0; i < decoded_users_online -> n_users; i++)
+        {
+          ChatSistOS__User *user = decoded_users_online -> users[i];
+          printf("%d: %s (ip: %d)\n", i+1, user -> user_name, user -> user_ip);
+        }
       }
     }
     else if(opcion_menu == 5) // Info de usuario particular
