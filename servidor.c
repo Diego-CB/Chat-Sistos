@@ -219,10 +219,96 @@ void *manejar_comunicaciones(void* arg)
       strcpy(sender_mensaje_general, mensaje_recibido_general->message_sender);
       char contenido_mensaje[1024];
       strcpy(contenido_mensaje, mensaje_recibido_general->message_content)
+
+      ChatSistOS__Message mensaje_a_enviar_general = CHAT_SIST_OS__MESSAGE__INIT;
+      mensaje_a_enviar_general.message_private = 0;
+      mensaje_a_enviar_general.message_sender = sender_mensaje_general; 
+      mensaje_a_enviar_general.message_content = contenido_mensaje;
+
+      //ARMAR ANSWER
+      ChatSistOS__Answer respuesta_mensaje_broadcast = CHAT_SIST_OS__ANSWER__INIT;
+      respuesta_mensaje_broadcast.op = 1;
+      respuesta_mensaje_broadcast.response_status_code = 200;
+      respuesta_mensaje_broadcast.response_message = " > Mensaje enviado con exito!";
+      respuesta_mensaje_broadcast.message = &mensaje_a_enviar_general;
+
+      //ENVIARLE AL USUARIO LA RESPUESTA
+      //serializar
+      size_t respuesta_mensaje_broadcast_size = chat_sist_os__answer__get_packed_size(&respuesta_mensaje_broadcast);
+      uint8_t *respuesta_mensaje_broadcast_buf = malloc(respuesta_mensaje_broadcast_size);
+      chat_sist_os__answer__pack(&respuesta_mensaje_broadcast, respuesta_mensaje_broadcast_buf);
+
+
+      //enviar a todos los activos que no sean sender
+      pthread_mutex_lock(&structure_mutex);
+      for (int i = 0; i < num_clientes; i++) {
+        if (clientes[i].stats == 1 && strcmp(clientes[i].name, sender_mensaje_general) != 0) {
+          if (send(clientes[i].sockfd, respuesta_mensaje_broadcast_buf, respuesta_mensaje_broadcast_size, 0) == -1) {
+            perror(" > Error en send");
+            exit(EXIT_FAILURE);
+          }
+        }
+      }
+      pthread_mutex_unlock(&structure_mutex);
+
+      //ARMAR ANSWER PARA SENDER °°
     }
     else if (option == 2)
     {
       // opcion 2
+
+      ChatSistOS__Message *mensaje_recibido_priv = user_option_handler->message;
+      char sender_mensaje_general[101];
+      strcpy(sender_mensaje_general, mensaje_recibido_priv->message_sender);
+      char contenido_mensaje[1024];
+      strcpy(contenido_mensaje, mensaje_recibido_priv->message_content)
+      char recieves_mensaje_general[101];
+      strcpy(recieves_mensaje_general, mensaje_recibido_priv->message_destination)
+
+      ChatSistOS__Message mensaje_a_enviar_priv = CHAT_SIST_OS__MESSAGE__INIT;
+      mensaje_a_enviar_priv.message_private = 1;
+      mensaje_a_enviar_priv.message_sender = sender_mensaje_general; 
+      mensaje_a_enviar_priv.message_content = contenido_mensaje;
+      mensaje_a_enviar_priv.message_destination = recieves_mensaje_general;
+
+      //enviar a el usuario destinatario
+      pthread_mutex_lock(&structure_mutex);
+      bool user_found = false;
+      int indice_user = 0;
+      for (int i = 0; i < num_clientes; i++) {
+        if (clientes[i].stats == 1 && strcmp(clientes[i].name, recieves_mensaje_general) == 0) {
+          user_found = true; 
+          indice_user = i;
+        }
+      }
+
+      if (!user_found) {
+        // ANSWER DE NO LO LOGRE MANDAR AL DESTINATARIO PARA EL SENDER  °°
+
+      } else {
+        // answer de si lo encontro al reciever para que tenga el mensaje
+        ChatSistOS__Answer respuesta_mensaje_priv = CHAT_SIST_OS__ANSWER__INIT;
+        respuesta_mensaje_priv.op = 1;
+        respuesta_mensaje_priv.response_status_code = 200;
+        respuesta_mensaje_priv.response_message = " > Mensaje enviado con exito!";
+        respuesta_mensaje_priv.message = &mensaje_a_enviar_priv;
+
+        //ENVIARLE AL USUARIO LA RESPUESTA
+        //serializar
+        size_t respuesta_mensaje_priv_size = chat_sist_os__answer__get_packed_size(&respuesta_mensaje_priv);
+        uint8_t *respuesta_mensaje_priv_buf = malloc(respuesta_mensaje_priv_size);
+        chat_sist_os__answer__pack(&respuesta_mensaje_priv, respuesta_mensaje_priv_buf);
+
+        if (send(clientes[indice_user].sockfd, respuesta_mensaje_priv_buf, respuesta_mensaje_priv_size, 0) == -1) {
+          perror(" > Error en send");
+          exit(EXIT_FAILURE);
+        }
+
+        //ANSWER DE QUE SI LO MANDE AL SENDER °°
+      }
+
+      pthread_mutex_unlock(&structure_mutex);
+
     }
     else if (option == 3)
     {

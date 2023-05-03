@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
           scanf("%s", nuevoMensaje);
           printf("\n");
           ChatSistOS__Message nuevo_mensaje_priv = CHAT_SIST_OS__MESSAGE__INIT;
-          nuevo_mensaje_priv.message_private = 0;
+          nuevo_mensaje_priv.message_private = 1;
           nuevo_mensaje_priv.message_sender = user_name; 
           nuevo_mensaje_priv.message_content = nuevoMensaje;
           nuevo_mensaje_priv.message_destination = cliente_para_mensaje_priv;
