@@ -177,7 +177,7 @@ int main(int argc, char *argv[]) {
         );
 
         // Print del listado
-        printf("Numero de usuarios en lineaL %d\n", decoded_users_online -> n_users);
+        printf("Numero de usuarios en lineaL %d\n", (int) decoded_users_online -> n_users);
         printf("---- Usuarios en Linea ----\n");
         for (int i = 0; i < decoded_users_online -> n_users; i++)
         {
@@ -191,8 +191,9 @@ int main(int argc, char *argv[]) {
       user_option_menu.op = 5;
       ChatSistOS__UserList listar_usuarios_userlist = CHAT_SIST_OS__USER_LIST__INIT;
 
-      char* usuario_especifico_listar = "";
-      scanf("Ingresa el nombre del usuario: %s", &usuario_especifico_listar);
+      char usuario_especifico_listar[101];
+      printf("Ingresa el nombre del usuario: ");
+      scanf("%s", usuario_especifico_listar);
       printf("\n");
 
       listar_usuarios_userlist.list = 0;
