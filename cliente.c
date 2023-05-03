@@ -12,13 +12,15 @@
 // Prototipos de funciones a usar
 void print_ayuda();
 int get_user_input();
+void ver_mensajes_recibidos(int);
 ChatSistOS__Answer* send_user_option(ChatSistOS__UserOption, int);
 
 // Main
 int main(int argc, char *argv[]) {
 
   // Variables pasadas como parametro de consola
-  char* user_name = argv[1];
+  char user_name[101];    
+  strcpy(user_name, argv[1]);
   char* ip_server = argv[2];
   int puerto_server = atoi(argv[3]);
   
@@ -74,6 +76,9 @@ int main(int argc, char *argv[]) {
   int opcion_menu = 0;
   while (opcion_menu != 7) 
   {
+    // Print de mensajes recibidos
+    ver_mensajes_recibidos(sock);
+
     // Obtener input del usuario
     opcion_menu = get_user_input();
 
@@ -85,10 +90,6 @@ int main(int argc, char *argv[]) {
       user_option_menu.op = 1;
       int valor_opcion_chat_general = 0;
       while (valor_opcion_chat_general != 2) {
-
-        
-
-        // Recivir answer siempre del servidor conteniendo mensajes en general AQUI
 
         printf(" 1 -> Enviar mensaje nuevo al chat general\n");
         printf(" 2 -> Regresar al menu principal\n");
@@ -102,7 +103,25 @@ int main(int argc, char *argv[]) {
         }
         else if (valor_opcion_chat_general == 1)
         {
-          // Lógica para enviar un mensaje nuevo al chat general
+          char nuevoMensaje[1024];
+          printf(" Ingresa el mensaje:  ");
+          scanf("%s", nuevoMensaje);
+          printf("\n");
+          ChatSistOS__Message nuevo_mensaje_general = CHAT_SIST_OS__MESSAGE__INIT;
+          nuevo_mensaje_general.message_private = 0;
+          nuevo_mensaje_general.message_sender = user_name; 
+          nuevo_mensaje_general.message_content = nuevoMensaje;
+
+          user_option_menu.message = &nuevo_mensaje_general;
+
+          //mandar el user option al servidor
+          ChatSistOS__Answer* respuesta = send_user_option(user_option_menu, sock);
+
+          if (respuesta -> response_status_code == 200) {
+            printf(" * enviado *\n");
+          } else {
+            printf("Error No se ha enviado el mensaje\n");
+          } 
         }
       }
       
@@ -110,6 +129,48 @@ int main(int argc, char *argv[]) {
     else if (opcion_menu == 2) // Inbox
     {
       user_option_menu.op = 2;
+      int valor_opcion_chat_general = 0;
+      while (valor_opcion_chat_general != 2) {
+
+        char cliente_para_mensaje_priv[101];
+        printf(" A quien deseas enviar el mensaje:  ");
+        scanf("%s", cliente_para_mensaje_priv);
+        printf("\n");
+
+        printf(" 1 -> Enviar otro mensaje a %s\n", cliente_para_mensaje_priv);
+        printf(" 2 -> Regresar al menu principal\n");
+        printf(" Ingresa la opción que deseas ejecutar (1|2):  ");
+        scanf("%d", &valor_opcion_chat_general);
+        printf("\n");
+
+        if (valor_opcion_chat_general < 1 || valor_opcion_chat_general > 2)
+        {
+          printf("\nERROR: Ingrese una opción valida\n\n");
+        }
+        else if (valor_opcion_chat_general == 1)
+        {
+          char nuevoMensaje[1024];
+          printf(" Ingresa el mensaje:  ");
+          scanf("%s", nuevoMensaje);
+          printf("\n");
+          ChatSistOS__Message nuevo_mensaje_priv = CHAT_SIST_OS__MESSAGE__INIT;
+          nuevo_mensaje_priv.message_private = 0;
+          nuevo_mensaje_priv.message_sender = user_name; 
+          nuevo_mensaje_priv.message_content = nuevoMensaje;
+          nuevo_mensaje_priv.message_destination = cliente_para_mensaje_priv;
+
+          user_option_menu.message = &nuevo_mensaje_priv;
+
+          //mandar el user option al servidor
+          ChatSistOS__Answer* respuesta = send_user_option(user_option_menu, sock);
+
+          if (respuesta -> response_status_code == 200) {
+            printf(" * enviado *\n");
+          } else {
+            printf("Error No se ha enviado el mensaje\n");
+          } 
+        }
+      }
     }
     else if (opcion_menu == 3) // Cambiar estatus
     {
@@ -153,9 +214,7 @@ int main(int argc, char *argv[]) {
       // Llenar UserOption
       user_option_menu.op = 4;
       ChatSistOS__UserList listar_usuarios_userlist_todos = CHAT_SIST_OS__USER_LIST__INIT;
-
       listar_usuarios_userlist_todos.list = 0;
-      listar_usuarios_userlist_todos.user_name = "";
 
       // Agregar el userlist a la user option.
       user_option_menu.userlist = &listar_usuarios_userlist_todos;
@@ -170,10 +229,11 @@ int main(int argc, char *argv[]) {
       } else {
         // Desempquetar buffer
         uint8_t buffer_users_online[4096];
+        printf("antes unpack\n");
         ChatSistOS__UsersOnline *decoded_users_online = chat_sist_os__users_online__unpack(
           NULL,
-          buffer_users_online,
-          (int) sizeof(buffer_users_online)
+          (int) sizeof(buffer_users_online),
+          buffer_users_online
         );
 
         // Print del listado
@@ -229,6 +289,35 @@ int main(int argc, char *argv[]) {
   }
   
   return 0;
+}
+
+void ver_mensajes_recibidos(int sock)
+{
+  // Recibir mensajes
+  uint8_t buffer_mensaje[4096];
+  ssize_t bytes_mensaje = recv(sock, buffer_mensaje, sizeof(buffer_mensaje), 0);
+  if (bytes_mensaje < 0) {
+    printf("---- Mensajes Recibido ----\n");
+
+    // Deserializar mensaje Answer
+    ChatSistOS__Answer *answer_mensaje_recibido = chat_sist_os__answer__unpack(NULL, bytes_mensaje, buffer_mensaje);
+    if (answer_mensaje_recibido ->response_status_code == 200)
+    {
+      ChatSistOS__Message *mensaje_recibido = answer_mensaje_recibido -> message;
+      char* mensaje_text = mensaje_recibido -> message_content;
+
+      // Mensaje privado
+      if (mensaje_recibido -> message_private)
+      {
+        char* sender  = mensaje_recibido -> message_sender;
+        printf("> [%s]: %s\n", sender, mensaje_recibido);
+      }
+      else
+      {
+        printf("> [Broadcast]: %s\n", mensaje_recibido);
+      }
+    }
+  }
 }
 
 /**

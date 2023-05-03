@@ -25,7 +25,6 @@ typedef struct {
   int stats;
   char name[101];
   char* direccion_ip;
-  //lista de mensajes limite de 10 mensajes y si hay un nuevo mensaje y hay 10 borre el ultimo y agregue el nuevo
 } info_cliente_;
 
 // Lista de clientes conectados al servidor
@@ -33,9 +32,6 @@ info_cliente_ clientes[LIMITE_SESIONES];
 
 // Numero de clientes conectados al servidor
 int num_clientes = 0;
-
-// Broadcast matrix
-ChatSistOS__Message broadcast[100];
 
 // Prototipo de subrutina para threads
 void* manejar_comunicaciones(void* arg);
@@ -200,144 +196,180 @@ void *manejar_comunicaciones(void* arg)
     ChatSistOS__UserOption *user_option_handler = chat_sist_os__user_option__unpack(NULL, bytes_recieved, buf);
     int option = user_option_handler -> op;
 
+    pthread_mutex_lock(&structure_mutex);
+    printf("REQUEST %d RECIVED FROM CLIENT %s\n", option, cliente -> name);
+    pthread_mutex_unlock(&structure_mutex);
+
     ChatSistOS__Answer respuesta_al_cliente = CHAT_SIST_OS__ANSWER__INIT;
     respuesta_al_cliente.op = option;
 
     //verificar que opcion viene el usuario.
-    switch (respuesta_al_cliente.op) {
-      case 1:
-        // codigo para la opcion 1
-        break;
-      case 2:
-        // codigo para la opcion 2
-        break;
-      case 3:
-        // codigo para la opcion 3
+    if (option == 0)
+    {
+      pthread_mutex_lock(&structure_mutex);
+      printf("USER %s DISCONCTED\n", cliente -> name);
+      pthread_mutex_unlock(&structure_mutex);
+      pthread_exit(NULL);
+      close(client_sockfd);
+    }
+    else if (option == 1)
+    {
+      ChatSistOS__Message *mensaje_recibido_general = user_option_handler->message;
+      char sender_mensaje_general[101];
+      strcpy(sender_mensaje_general, mensaje_recibido_general->message_sender);
+      char contenido_mensaje[1024];
+      strcpy(contenido_mensaje, mensaje_recibido_general->message_content)
+    }
+    else if (option == 2)
+    {
+      // opcion 2
+    }
+    else if (option == 3)
+    {
+      // codigo para la opcion 3
 
-        ChatSistOS__Status *handle_status = user_option_handler->status;
-        char* usr_status_handler = handle_status->user_name;
-        int nuevo_valor_status = handle_status->user_state;
+      ChatSistOS__Status *handle_status = user_option_handler->status;
+      char* usr_status_handler = handle_status->user_name;
+      int nuevo_valor_status = handle_status->user_state;
 
-        int cliente_index = -1; 
-        pthread_mutex_lock(&structure_mutex);
-        
-        for (int i = 0; i < num_clientes; i++) {
-          if (strcmp(clientes[i].name, usr_status_handler) == 0) {
-            cliente_index = i;
-            break;
-          }
+      int cliente_index = -1; 
+      pthread_mutex_lock(&structure_mutex);
+      
+      for (int i = 0; i < num_clientes; i++) {
+        if (strcmp(clientes[i].name, usr_status_handler) == 0) {
+          cliente_index = i;
+          break;
         }
+      }
 
-        // Si se encontró un cliente con el nombre de usuario especificado, actualizar su estado
-        if (cliente_index != -1) {
-          clientes[cliente_index].stats = nuevo_valor_status;
-          // MANDAR ANSWER QUE SI SE LOGRO
-          respuesta_al_cliente.response_status_code = 200;
-          respuesta_al_cliente.response_message = " > Se ha cambiado tu status con exito.\n";
-        } else {
-          // MANDAR ANSWER QUE NO SE LOGRO
-          respuesta_al_cliente.response_status_code = 400;
-          respuesta_al_cliente.response_message = " > ERROR. No se ha cambiado tu status. Usuario no encontrado.\n";
+      // Si se encontró un cliente con el nombre de usuario especificado, actualizar su estado
+      if (cliente_index != -1) {
+        clientes[cliente_index].stats = nuevo_valor_status;
+        // MANDAR ANSWER QUE SI SE LOGRO
+        respuesta_al_cliente.response_status_code = 200;
+        respuesta_al_cliente.response_message = " > Se ha cambiado tu status con exito.\n";
+      } else {
+        // MANDAR ANSWER QUE NO SE LOGRO
+        respuesta_al_cliente.response_status_code = 400;
+        respuesta_al_cliente.response_message = " > ERROR. No se ha cambiado tu status. Usuario no encontrado.\n";
+      }
+
+      pthread_mutex_unlock(&structure_mutex);
+    }
+    else if (option == 4)
+    {
+      // codigo para la opcion 4
+      ChatSistOS__UserList *usuarios_conectados = user_option_handler -> userlist;
+      ChatSistOS__UsersOnline usuarios_online = CHAT_SIST_OS__USERS_ONLINE__INIT;
+      
+
+      pthread_mutex_lock(&structure_mutex);
+      // Buscar los clientes con stats igual a 1 y agregar sus nombres de usuario al arreglo usuarios_conectados
+      int num_usuarios_conectados = 0;
+      for (int i = 0; i < num_clientes; i++) {
+        if (clientes[i].stats == 1) {
+          num_usuarios_conectados++;
         }
+      }
+      // Inicializar lista con el numero de usuarios conectados
+      ChatSistOS__User *usuarios_conectados_list[num_usuarios_conectados];
 
-        pthread_mutex_unlock(&structure_mutex);
-
-        int i;
-        //mutex lock
-        pthread_mutex_lock(&structure_mutex);
-        for (i = 0; i < num_clientes; i++){
-          printf("--------------------------\n");
-          printf("Cliente %d:\n", i);
-          printf("Nombre: %s\n", clientes[i].name);
-          printf("stats: %d\n", clientes[i].stats);
+      int usuarios_asignados = 0;
+      for (int i = 0; i < num_clientes; i++) {
+        if (clientes[i].stats == 1) {
+          // meter el user a la lista
+          ChatSistOS__User nuevo_enlista = CHAT_SIST_OS__USER__INIT;
+          nuevo_enlista.user_ip = clientes[i].direccion_ip;
+          nuevo_enlista.user_name = clientes[i].name;
+          nuevo_enlista.user_state = clientes[i].stats;
+          usuarios_conectados_list[usuarios_asignados] = &nuevo_enlista;
+          usuarios_asignados++;
         }
-        pthread_mutex_unlock(&structure_mutex);
-        //mutex unlock
+      }
+      //strcpy(usuarios_conectados_list[num_usuarios_conectados], clientes[i].name);
+      
+      // si la lista tiene elementos se genera answer
+      if (num_usuarios_conectados > 0) {
+        respuesta_al_cliente.response_status_code = 200;
+        respuesta_al_cliente.response_message = " > Exito encontrando usuarios";
+        usuarios_online.n_users = num_usuarios_conectados;
+        usuarios_online.users = usuarios_conectados_list;
+        respuesta_al_cliente.users_online = &usuarios_online;
+      } else {
+        respuesta_al_cliente.response_status_code = 400;
+        respuesta_al_cliente.response_message = " > Error no se ha logrado encontrar usuarios conectados";
+      }
 
-        break;
-      case 4:
-        // codigo para la opcion 4
-        ChatSistOS__UserList *usuarios_conectados = user_option_handler->userlist;
-        ChatSistOS__UsersOnline usuarios_online = CHAT_SIST_OS__USERS_ONLINE__INIT;
+      pthread_mutex_unlock(&structure_mutex);
+    }
+    else if  (option == 5)
+    {
+      ChatSistOS__UserList *usuario_especifico = user_option_handler -> userlist;
+      char *user_to_see = usuario_especifico -> user_name;
+      int index_case_5;
+      int user_founded_5 = 0;
+      info_cliente_ cliente_objetivo_5;
 
-
-
-        pthread_mutex_lock(&structure_mutex);
-        char usuarios_conectados_list[LIMITE_SESIONES][101];
-        int num_usuarios_conectados = 0;
-
-        // Buscar los clientes con stats igual a 1 y agregar sus nombres de usuario al arreglo usuarios_conectados
-        for (int i = 0; i < num_clientes; i++) {
-          if (clientes[i].stats == 1) {
-            strcpy(usuarios_conectados_list[num_usuarios_conectados], clientes[i].name);
-            num_usuarios_conectados++;
-          }
-        }
-        
-        // si la lista tiene elementos se genera answer
-        if (num_usuarios_conectados > 0) {
-          respuesta_al_cliente.response_status_code = 200;
-          respuesta_al_cliente.response_message = " > Exito encontrando usuarios";
-          usuarios_online.users = usuarios_conectados_list;
-          respuesta_al_cliente.users_online = &usuarios_online;
-        } else {
-          respuesta_al_cliente.response_status_code = 400;
-          respuesta_al_cliente.response_message = " > Error no se ha logrado encontrar usuarios conectados";
-        }
-
-        pthread_mutex_unlock(&structure_mutex);
-        break;
-      case 5:
-        ChatSistOS__UserList *usuario_especifico = user_option_handler -> userlist;
-        char *user_to_see = usuario_especifico -> user_name;
-        int index_case_5;
-        int user_founded_5 = 0;
-        info_cliente_ cliente_objetivo_5;
-
-        // codigo para la opcion 5
-        pthread_mutex_lock(&structure_mutex);
-        
-        for (index_case_5 = 0; index_case_5 < num_clientes; index_case_5++)
+      // codigo para la opcion 5
+      pthread_mutex_lock(&structure_mutex);
+      
+      for (index_case_5 = 0; index_case_5 < num_clientes; index_case_5++)
+      {
+        info_cliente_ cliente_actual_5 = clientes[index_case_5];
+        if (strcmp(cliente_actual_5.name, user_to_see) == 0)
         {
-          info_cliente_ cliente_actual_5 = clientes[index_case_5];
-          if (cliente_actual_5.name == user_to_see)
-          {
-            cliente_objetivo_5 = cliente_actual_5;
-            user_founded_5++;
-          }
+          cliente_objetivo_5 = cliente_actual_5;
+          user_founded_5++;
         }
-        
-        if (user_founded_5 > 0)
-        {
-          ChatSistOS__User user_return_5 = CHAT_SIST_OS__USER__INIT;
-          user_return_5.user_ip = cliente_objetivo_5.direccion_ip;
-          user_return_5.user_name = cliente_objetivo_5.name;
-          user_return_5.user_state = cliente_objetivo_5.stats;
+      }
+      
+      if (user_founded_5 > 0)
+      {
+        ChatSistOS__User user_return_5 = CHAT_SIST_OS__USER__INIT;
+        user_return_5.user_ip = cliente_objetivo_5.direccion_ip;
+        user_return_5.user_name = cliente_objetivo_5.name;
+        user_return_5.user_state = cliente_objetivo_5.stats;
 
 
-          respuesta_al_cliente.user = &user_return_5;
-          respuesta_al_cliente.response_status_code = 200;
-        }
-        else
-        {
-          respuesta_al_cliente.response_status_code = 400;
-          respuesta_al_cliente.response_message = "No se pudo encontrar el usuario\n";
-        }
-        pthread_mutex_unlock(&structure_mutex);
-        break;
+        respuesta_al_cliente.user = &user_return_5;
+        respuesta_al_cliente.response_status_code = 200;
+      }
+      else
+      {
+        respuesta_al_cliente.response_status_code = 400;
+        respuesta_al_cliente.response_message = "No se pudo encontrar el usuario\n";
+      }
+      pthread_mutex_unlock(&structure_mutex);
     }
 
     // Enviar mensaje al cliente
+    printf("RESPONSE STATUS CODE %d", respuesta_al_cliente.response_status_code);
+    if (respuesta_al_cliente.response_status_code == 200)
+    {
+      printf("\n");
+    }
+    else
+    {
+      printf(": %s\n", respuesta_al_cliente.response_message);
+    }
+
     //serializar
+    printf("Antes de size\n");
     size_t respuesta_al_cliente_size = chat_sist_os__answer__get_packed_size(&respuesta_al_cliente);
+    printf("size answer exitoso\n");
     uint8_t *respuesta_al_cliente_buf = malloc(respuesta_al_cliente_size);
+    printf("buffer created\n");
     chat_sist_os__answer__pack(&respuesta_al_cliente, respuesta_al_cliente_buf);
 
+    printf("serializar exitoso\n");
+    
     //enviar
     if (send(client_sockfd, respuesta_al_cliente_buf, respuesta_al_cliente_size, 0) == -1) {
       perror(" > Error en send");
       exit(EXIT_FAILURE);
     }
+
+    printf("envio exitoso\n");
     
   }
 
