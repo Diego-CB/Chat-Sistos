@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 {
   // Ruta para coneccion
   int puerto = atoi(argv[1]);
-  char *ip_server = "127.0.0.1";
+  char *ip_server = "18.221.21.104";
 
   // Crear un socket para escuchar conexiones entrantes
   int server_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
   // Especificar la direccion IP y el puerto del servidor
   struct sockaddr_in server_addr;
   server_addr.sin_family = AF_INET;
-  server_addr.sin_addr.s_addr = inet_addr(ip_server);
+  server_addr.sin_addr.s_addr = INADDR_ANY;
   server_addr.sin_port = htons(puerto);
 
   // Vincular el socket con la direccion IP y el puerto
@@ -97,6 +97,7 @@ int main(int argc, char **argv)
     ChatSistOS__NewUser *nuevo_usuario = user_option_createUser -> createuser;
 
     char* ip_usuario = nuevo_usuario -> ip;
+    printf("%s\n", ip_usuario);
     
     char nombre_usuario[101];    
     strcpy(nombre_usuario, nuevo_usuario -> username);
@@ -183,8 +184,6 @@ void *manejar_comunicaciones(void* arg)
   info_cliente_ *cliente = (info_cliente_*)arg;
   int client_sockfd = cliente->sockfd;
 
-  
-
   // Manejar comunicaciones
   while (1) {
     // Recibir mensaje del cliente
@@ -245,7 +244,6 @@ void *manejar_comunicaciones(void* arg)
       pthread_mutex_lock(&structure_mutex);
       for (int i = 0; i < num_clientes; i++) {
         if (clientes[i].stats == 1) {
-          printf("msm %s\n", contenido_mensaje);
           if (send(clientes[i].sockfd, respuesta_mensaje_broadcast_buf, respuesta_mensaje_broadcast_size, 0) == -1) {
             perror(" > Error en send");
             exit(EXIT_FAILURE);
@@ -339,9 +337,9 @@ void *manejar_comunicaciones(void* arg)
 
       // Si se encontró un cliente con el nombre de usuario especificado, actualizar su estado
       if (cliente_index != -1) {
+        respuesta_al_cliente.response_status_code = 200;
         clientes[cliente_index].stats = nuevo_valor_status;
         // MANDAR ANSWER QUE SI SE LOGRO
-        respuesta_al_cliente.response_status_code = 200;
         respuesta_al_cliente.response_message = " > Se ha cambiado tu status con exito.\n";
       } else {
         // MANDAR ANSWER QUE NO SE LOGRO
@@ -353,47 +351,28 @@ void *manejar_comunicaciones(void* arg)
     }
     else if (option == 4)
     {
-      // codigo para la opcion 4
-      ChatSistOS__UserList *usuarios_conectados = user_option_handler -> userlist;
-      ChatSistOS__UsersOnline usuarios_online = CHAT_SIST_OS__USERS_ONLINE__INIT;
-      
+      // codigo para la opcion 4 
+      char usuarios[1024] = "";
+      respuesta_al_cliente.response_message = "";
 
       pthread_mutex_lock(&structure_mutex);
       // Buscar los clientes con stats igual a 1 y agregar sus nombres de usuario al arreglo usuarios_conectados
       int num_usuarios_conectados = 0;
       for (int i = 0; i < num_clientes; i++) {
-        if (clientes[i].stats == 1) {
-          num_usuarios_conectados++;
+        if (clientes[i].stats == 1){
+          strcat(usuarios, "> ");
+          strcat(usuarios, clientes[i].name);
+          strcat(usuarios, ": ");
+          strcat(usuarios, (char*)cliente[i].stats);
+          strcat(usuarios, "\n");
         }
       }
-      // Inicializar lista con el numero de usuarios conectados
-      ChatSistOS__User *usuarios_conectados_list[num_usuarios_conectados];
 
-      int usuarios_asignados = 0;
-      for (int i = 0; i < num_clientes; i++) {
-        if (clientes[i].stats == 1) {
-          // meter el user a la lista
-          ChatSistOS__User nuevo_enlista = CHAT_SIST_OS__USER__INIT;
-          nuevo_enlista.user_ip = clientes[i].direccion_ip;
-          nuevo_enlista.user_name = clientes[i].name;
-          nuevo_enlista.user_state = clientes[i].stats;
-          usuarios_conectados_list[usuarios_asignados] = &nuevo_enlista;
-          usuarios_asignados++;
-        }
-      }
-      //strcpy(usuarios_conectados_list[num_usuarios_conectados], clientes[i].name);
+      respuesta_al_cliente.response_message = usuarios;
       
       // si la lista tiene elementos se genera answer
-      if (num_usuarios_conectados > 0) {
-        respuesta_al_cliente.response_status_code = 200;
-        respuesta_al_cliente.response_message = " > Exito encontrando usuarios";
-        usuarios_online.n_users = num_usuarios_conectados;
-        usuarios_online.users = usuarios_conectados_list;
-        respuesta_al_cliente.users_online = &usuarios_online;
-      } else {
-        respuesta_al_cliente.response_status_code = 400;
-        respuesta_al_cliente.response_message = " > Error no se ha logrado encontrar usuarios conectados";
-      }
+      respuesta_al_cliente.response_status_code = 200;
+
 
       pthread_mutex_unlock(&structure_mutex);
     }
@@ -449,15 +428,10 @@ void *manejar_comunicaciones(void* arg)
     }
 
     //serializar
-    printf("Antes de size\n");
     size_t respuesta_al_cliente_size = chat_sist_os__answer__get_packed_size(&respuesta_al_cliente);
-    printf("size answer exitoso\n");
     uint8_t *respuesta_al_cliente_buf = malloc(respuesta_al_cliente_size);
-    printf("buffer created\n");
     chat_sist_os__answer__pack(&respuesta_al_cliente, respuesta_al_cliente_buf);
 
-    printf("serializar exitoso\n");
-    
     //enviar
     if (send(client_sockfd, respuesta_al_cliente_buf, respuesta_al_cliente_size, 0) == -1) {
       perror(" > Error en send");
