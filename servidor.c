@@ -362,8 +362,6 @@ void *manejar_comunicaciones(void* arg)
         if (clientes[i].stats == 1){
           strcat(usuarios, "> ");
           strcat(usuarios, clientes[i].name);
-          strcat(usuarios, ": ");
-          strcat(usuarios, (char*)cliente[i].stats);
           strcat(usuarios, "\n");
         }
       }

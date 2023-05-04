@@ -25,6 +25,7 @@ int main(int argc, char *argv[]) {
   strcpy(user_name, argv[1]);
   char* ip_server = argv[2];
   int puerto_server = atoi(argv[3]);
+  printf("ip %s\n", ip_server);
   
   // Crear un socket
   int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -271,30 +272,8 @@ int main(int argc, char *argv[]) {
 
       // Mandar user Option
       ChatSistOS__Answer* respuesta = send_user_option(user_option_menu, sock);
+      printf("%s", respuesta ->response_message);
 
-      // Verificar respueta del server
-      if (respuesta -> response_status_code != 200) {
-        printf("Error al obtener lista dde usuarios conectados\n");
-        continue;
-      } else {
-        // Desempquetar buffer
-        uint8_t buffer_users_online[4096];
-        printf("antes unpack\n");
-        ChatSistOS__UsersOnline *decoded_users_online = chat_sist_os__users_online__unpack(
-          NULL,
-          (int) sizeof(buffer_users_online),
-          buffer_users_online
-        );
-
-        // Print del listado
-        printf("Numero de usuarios en lineaL %d\n", (int) decoded_users_online -> n_users);
-        printf("---- Usuarios en Linea ----\n");
-        for (int i = 0; i < decoded_users_online -> n_users; i++)
-        {
-          ChatSistOS__User *user = decoded_users_online -> users[i];
-          printf("%d: %s (ip: %s)\n", i+1, user -> user_name, user -> user_ip);
-        }
-      }
     }
     else if(opcion_menu == 5) // Info de usuario particular
     {
@@ -348,12 +327,13 @@ void ver_mensajes_recibidos(int sock)
   ssize_t bytes_mensaje = recv(sock, buffer_mensaje, sizeof(buffer_mensaje), 0);
   
   if (bytes_mensaje != -1) {
-    printf("---- Mensajes Recibido ----\n");
+
 
     // Deserializar mensaje Answer
     ChatSistOS__Answer *answer_mensaje_recibido = chat_sist_os__answer__unpack(NULL, bytes_mensaje, buffer_mensaje);
     if (answer_mensaje_recibido -> response_status_code == 200)
     {
+      printf("---- Mensajes Recibido ----\n");
 
       ChatSistOS__Message *mensaje_recibido = answer_mensaje_recibido -> message;
       char mensaje_text[1024];
